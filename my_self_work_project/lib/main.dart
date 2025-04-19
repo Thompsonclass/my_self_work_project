@@ -25,7 +25,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()), // AuthProvider 등록
       ],
       child: MaterialApp(
-        title: 'DevSync',
+        title: 'OnePointUp',
         theme: ThemeData(
           primarySwatch: Colors.blue,
         ),
