@@ -18,7 +18,7 @@ class TypeSelectionScreen extends StatelessWidget {
     final types = typesByCategory[goalModel.category] ?? [];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('유형 선택')),
+      appBar: AppBar(title: const Text('유형 선택(2단계)')),
       body: GridView.count(
         crossAxisCount: 2,
         padding: const EdgeInsets.all(16.0),

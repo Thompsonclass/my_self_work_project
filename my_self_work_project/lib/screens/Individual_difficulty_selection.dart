@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/goal_model.dart';
-import 'summary_screen.dart';
+import 'individual_details_selection.dart';
 
 // 난이도(주간 스케줄) 선택 화면
-class DifficultySelectionScreen extends StatefulWidget {
+class IndividualDifficultySelectionScreen extends StatefulWidget {
   final GoalModel goalModel;
-  const DifficultySelectionScreen({required this.goalModel, Key? key})
+  const IndividualDifficultySelectionScreen({required this.goalModel, Key? key})
       : super(key: key);
 
   @override
@@ -14,7 +14,7 @@ class DifficultySelectionScreen extends StatefulWidget {
 }
 
 class _DifficultySelectionScreenState
-    extends State<DifficultySelectionScreen> {
+    extends State<IndividualDifficultySelectionScreen> {
   // 요일 라벨 (월~일)
   final List<String> _weekdayLabels = ['월', '화', '수', '목', '금', '토', '일'];
 
@@ -124,11 +124,11 @@ class _DifficultySelectionScreenState
                   context,
                   MaterialPageRoute(
                     builder: (_) =>
-                        SummaryScreen(goalModel: widget.goalModel),
+                        IndividualDetailsSelectionScreen(goalModel: widget.goalModel),
                   ),
                 );
               },
-              child: const Text('다음 (요약 화면으로)'),
+              child: const Text('세부내용 설정'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),

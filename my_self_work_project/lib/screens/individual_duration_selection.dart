@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/goal_model.dart';
-import 'difficulty_selection.dart';
+import 'Individual_difficulty_selection.dart.';
 
-class DurationSelectionScreen extends StatelessWidget {
+class IndividualDurationSelectionScreen extends StatelessWidget {
   final GoalModel goalModel;
 
-  DurationSelectionScreen({required this.goalModel});
+  IndividualDurationSelectionScreen({required this.goalModel});
 
   final List<String> durations = ['1주일', '2주일', '한 달'];
 
@@ -23,7 +23,7 @@ class DurationSelectionScreen extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => DifficultySelectionScreen(goalModel: goalModel),
+                  builder: (_) => IndividualDifficultySelectionScreen(goalModel: goalModel)
                 ),
               );
             },

@@ -1,17 +1,15 @@
+// lib/screens/individual_summary_screen.dart
 import 'package:flutter/material.dart';
 import '../models/goal_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
-import 'user_improvement_test.dart';
-//import 'user_improvement.dart';
+import 'dart:convert';
 
-
-class SummaryScreen extends StatelessWidget {
+class IndividualSummaryScreen extends StatelessWidget {
   final GoalModel goalModel;
+  const IndividualSummaryScreen({required this.goalModel, Key? key}) : super(key: key);
 
-  const SummaryScreen({required this.goalModel, Key? key}) : super(key: key);
-
-  void sendGoalToServer(BuildContext context) async {
+  Future<void> sendGoalToServer(BuildContext context) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -21,7 +19,7 @@ class SummaryScreen extends StatelessWidget {
     }
 
     final url = Uri.parse('http://###.###.#.#:8080/keywords');
-    //final body = jsonEncode(goalModel.toJson(user.uid)); // 주석 해제
+    //final body = jsonEncode(goalModel.toJson(user.uid));
 
     try {
       final response = await http.post(
@@ -52,15 +50,17 @@ class SummaryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 요일 인덱스를 한글로 바꿔주는 리스트
     final weekdayLabels = ['월', '화', '수', '목', '금', '토', '일'];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('최종 확인 (5단계)')),
+      appBar: AppBar(title: const Text('최종 확인 (6단계)')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // 1) 카테고리
             ListTile(
               leading: const Icon(Icons.category),
               title: const Text('카테고리'),
@@ -68,13 +68,15 @@ class SummaryScreen extends StatelessWidget {
             ),
             const Divider(),
 
+            // 2) 세부 유형 (type)
             ListTile(
-              leading: const Icon(Icons.style),
-              title: const Text('유형'),
+              leading: const Icon(Icons.label),
+              title: const Text('세부 유형(입력)'),
               subtitle: Text(goalModel.type ?? '-'),
             ),
             const Divider(),
 
+            // 3) 기간 (duration)
             ListTile(
               leading: const Icon(Icons.schedule),
               title: const Text('기간'),
@@ -82,58 +84,45 @@ class SummaryScreen extends StatelessWidget {
             ),
             const Divider(),
 
+            // 4) 주간 스케줄 (weeklyCount + selectedWeekdays)
             ListTile(
               leading: const Icon(Icons.repeat),
-              title: const Text('주당 횟수'),
-              subtitle: Text(
-                goalModel.weeklyCount != null
-                    ? '${goalModel.weeklyCount}회'
-                    : '-',
+              title: const Text('주간 스케줄'),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('${goalModel.weeklyCount ?? 0}회/주'),
+                  const SizedBox(height: 4),
+                  goalModel.selectedWeekdays != null && goalModel.selectedWeekdays!.isNotEmpty
+                      ? Wrap(
+                    spacing: 6,
+                    children: goalModel.selectedWeekdays!
+                        .map((i) => Chip(label: Text(weekdayLabels[i])))
+                        .toList(),
+                  )
+                      : const Text('-'),
+                ],
               ),
             ),
             const Divider(),
 
+            // 5) 하루 세부 목표 (details)
             ListTile(
-              leading: const Icon(Icons.calendar_today),
-              title: const Text('선택된 요일'),
-              subtitle: goalModel.selectedWeekdays != null && goalModel.selectedWeekdays!.isNotEmpty
-                  ? Wrap(
-                spacing: 6,
-                children: goalModel.selectedWeekdays!
-                    .map((i) => Chip(label: Text(weekdayLabels[i])))
-                    .toList(),
-              )
-                  : const Text('-'),
+              leading: const Icon(Icons.edit_note),
+              title: const Text('하루 세부 목표(입력)'),
+              subtitle: Text(goalModel.details ?? '-'),
             ),
-
             const Spacer(),
 
-            // 서버 전송 버튼
-            ElevatedButton.icon(
-              icon: const Icon(Icons.send),
-              label: const Text('서버로 전송'),
-              onPressed: () => sendGoalToServer(context),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            // 개인 난이도 세부 설정 화면으로 이동
-            OutlinedButton.icon(
-              icon: const Icon(Icons.settings),
-              label: const Text('표준 자기계발 UI'),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => UserImprovementScreen(goalModel: goalModel),
-                  ),
-                );
-              },
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            // 6) 서버 전송 버튼
+            Center(
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.send),
+                label: const Text('서버로 전송'),
+                onPressed: () => sendGoalToServer(context),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
               ),
             ),
           ],

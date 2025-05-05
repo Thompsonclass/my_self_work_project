@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/goal_model.dart';
-import 'type_selection.dart';
+import 'individual_type_selection.dart';
 
-class CategorySelectionScreen extends StatelessWidget {
+class IndividualCategorySelectionScreen extends StatelessWidget {
   final GoalModel goalModel;
 
-  CategorySelectionScreen({required this.goalModel});
+  IndividualCategorySelectionScreen({required this.goalModel});
 
   final List<String> categories = ['건강', '생활', '공부'];
 
@@ -25,7 +25,7 @@ class CategorySelectionScreen extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => TypeSelectionScreen(goalModel: goalModel),
+                  builder: (_) => IndividualTypeSelectionScreen(goalModel: goalModel),
                 ),
               );
             },
