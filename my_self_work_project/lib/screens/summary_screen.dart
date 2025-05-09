@@ -92,7 +92,7 @@ class SummaryScreen extends StatelessWidget {
               title: const Text('주당 횟수'),
               subtitle: Text(
                 goalModel.sessionsPerWeek != null
-                    ? '\${goalModel.sessionsPerWeek}회'
+                    ? '${goalModel.sessionsPerWeek}회'
                     : '-',
               ),
             ),
