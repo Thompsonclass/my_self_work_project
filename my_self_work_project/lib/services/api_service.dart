@@ -4,6 +4,17 @@ import 'package:http/http.dart' as http;
 class ApiService {
   static const String baseUrl = 'http://###.##.#.#:8080'; // ← IP는 여기에만
 
+  /// [goalJsonString]은 GoalModel의 toJsonString()으로부터 전달되는 JSON 문자열
+  /// 예시:
+  /// {
+  ///   "email": "user@example.com",
+  ///   "category": "운동",
+  ///   "keyword": "헬스",
+  ///   "period": "4주",
+  ///   "includeWeekend": true,
+  ///   "selectedWeekdays": ["월", "수", "금"],
+  ///   "sessionsPerWeek": 3
+  /// }
   static Future<void> postGoal(String goalJsonString) async {
     final url = Uri.parse('$baseUrl/api/goals');
 
@@ -18,21 +29,13 @@ class ApiService {
     }
   }
 
-  static Future<List<dynamic>> fetchPlanFromGPT(String userEmail) async {
-    final url = Uri.parse('$baseUrl/api/goals');
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({"email": userEmail}),
-    );
-
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('계획 불러오기 실패: ${response.statusCode}');
-    }
-  }
-
+  /// 사용자 닉네임, 이메일, 비밀번호를 JSON으로 전송
+  /// 요청 JSON:
+  /// {
+  ///   "username": "홍길동",
+  ///   "email": "hong@example.com",
+  ///   "password": "1234abcd"
+  /// }
   static Future<void> signUpUser({
     required String nickname,
     required String email,

@@ -10,14 +10,16 @@ class SummaryScreen extends StatelessWidget {
   const SummaryScreen({required this.goalModel, Key? key}) : super(key: key);
 
   void sendGoalToServer(BuildContext context) async {
+    // 현재 로그인한 Firebase 사용자 가져오기
     final user = FirebaseAuth.instance.currentUser;
+    // 로그인이 되어 있지 않으면 경고 메시지 표시
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('로그인이 필요합니다.')),
       );
       return;
     }
-
+    // 사용자 이메일 추출 (Spring 서버에서 사용자 식별에 사용)
     final userEmail = user.email;
     if (userEmail == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -25,10 +27,21 @@ class SummaryScreen extends StatelessWidget {
       );
       return;
     }
-
+    // 목표 모델 객체에 이메일 설정 → 서버에 함께 전송될 수 있도록
     goalModel.email = userEmail;
 
     try {
+      // API 서비스로 목표 데이터를 JSON 형식으로 전송
+      // goalModel.toJsonString()은 아래와 같은 JSON을 반환함:
+      // {
+      //   "email": "사용자 이메일",
+      //   "category": "운동",
+      //   "keyword": "헬스",
+      //   "period": "4주",
+      //   "includeWeekend": true,
+      //   "selectedWeekdays": ["월", "수", "금"],
+      //   "sessionsPerWeek": 3
+      // }
       await ApiService.postGoal(goalModel.toJsonString());
 
       showDialog(
@@ -39,6 +52,7 @@ class SummaryScreen extends StatelessWidget {
         ),
       );
     } catch (e) {
+      // 네트워크 오류 또는 서버 오류 발생 시 메시지 표시
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('에러 발생: $e')),
       );
