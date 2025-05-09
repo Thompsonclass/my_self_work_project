@@ -20,12 +20,12 @@ class _IndividualDetailsSelectionScreenState
   @override
   void initState() {
     super.initState();
-    // 텍스트가 바뀔 때마다 rebuild
     _detailsController.addListener(() => setState(() {}));
 
-    if (widget.goalModel.details != null) {
-      _detailsController.text = widget.goalModel.details!;
-    }
+    // details 필드 제거됨 → 불필요한 로직 삭제
+    // if (widget.goalModel.details != null) {
+    //   _detailsController.text = widget.goalModel.details!;
+    // }
   }
 
   @override
@@ -38,7 +38,10 @@ class _IndividualDetailsSelectionScreenState
 
   void _onNext() {
     if (!_isValid) return;
-    widget.goalModel.details = _detailsController.text.trim();
+
+    // details 저장 로직 제거됨
+    // widget.goalModel.details = _detailsController.text.trim();
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -50,9 +53,7 @@ class _IndividualDetailsSelectionScreenState
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    // 현재 선택된 type 에 따른 힌트
-    final hint = detailsHintByType[widget.goalModel.type]
-        ?? '세부 내용을 입력하세요';
+    final hint = detailsHintByType[widget.goalModel.keyword] ?? '세부 내용을 입력하세요';
 
     return Scaffold(
       appBar: AppBar(
@@ -103,17 +104,12 @@ class _IndividualDetailsSelectionScreenState
 
 /// type 별 세부 입력 힌트 맵
 const Map<String, String> detailsHintByType = {
-  // 건강 카테고리
   '운동 루틴': '예: 아침 스트레칭 10분, 저녁 러닝 30분',
   '식단 관리': '예: 아침 샐러드, 점심 닭가슴살, 저녁 샐러드',
   '수면 관리': '예: 22시 취침, 7시 기상',
-
-  // 생활 카테고리
   '청소 루틴': '예: 방 청소 10분, 거실 정리 15분',
   '금연': '예: 니코틴 패치 사용 3시간',
   '시간 관리': '예: 일정표에 30분 단위로 업무 블록 설정',
-
-  // 공부 카테고리
   '자격증 공부': '예: 하루 단원별 문제 20개 풀기',
   '영어 학습': '예: 영어 단어 20개 암기',
   '독서': '예: 하루 30페이지 읽기',

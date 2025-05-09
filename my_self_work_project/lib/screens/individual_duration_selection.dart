@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/goal_model.dart';
-import 'Individual_difficulty_selection.dart.';
+import 'Individual_difficulty_selection.dart';
 
 class IndividualDurationSelectionScreen extends StatelessWidget {
   final GoalModel goalModel;
@@ -19,11 +19,11 @@ class IndividualDurationSelectionScreen extends StatelessWidget {
           return ListTile(
             title: Text(duration),
             onTap: () {
-              goalModel.duration = duration;
+              goalModel.period = duration;
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => IndividualDifficultySelectionScreen(goalModel: goalModel)
+                  builder: (_) => IndividualDifficultySelectionScreen(goalModel: goalModel),
                 ),
               );
             },

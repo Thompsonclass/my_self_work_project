@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart'; // AuthProvider import
+import '../services/api_service.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -10,18 +9,17 @@ class SignUpPage extends StatefulWidget {
 }
 
 class _SignUpPageState extends State<SignUpPage> {
-  final _formKey = GlobalKey<FormState>(); // 폼의 상태를 관리하는 키
-  bool _isPasswordVisible = false; // 비밀번호 가시성 상태 변수
-  bool _isConfirmPasswordVisible = false; // 비밀번호 확인 가시성 상태 변수
+  final _formKey = GlobalKey<FormState>();
+  bool _isPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
 
-  final _usernameController = TextEditingController(); // 사용자 이름 컨트롤러
-  final _passwordController = TextEditingController(); // 비밀번호 컨트롤러
-  final _confirmPasswordController = TextEditingController(); // 비밀번호 확인 컨트롤러
-  final _emailController = TextEditingController(); // 이메일 컨트롤러
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  final _emailController = TextEditingController();
 
   @override
   void dispose() {
-    // 컨트롤러 메모리 해제
     _usernameController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -31,118 +29,108 @@ class _SignUpPageState extends State<SignUpPage> {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context); // AuthProvider 인스턴스 가져오기
-
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Center(
           child: SingleChildScrollView(
             child: Form(
-              key: _formKey, // 폼 키 설정
+              key: _formKey,
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center, // 중앙 정렬
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // 사용자 이름 입력 필드
                   TextFormField(
                     controller: _usernameController,
-                    decoration: InputDecoration(labelText: 'Username'),
+                    decoration: const InputDecoration(labelText: 'Username'),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter a username'; // 빈 값 검사
+                        return 'Please enter a username';
                       }
                       return null;
                     },
                   ),
-                  SizedBox(height: 16),
-
-                  // 비밀번호 입력 필드
+                  const SizedBox(height: 16),
                   TextFormField(
                     controller: _passwordController,
                     decoration: InputDecoration(
                       labelText: 'Password',
                       suffixIcon: IconButton(
-                        icon: Icon(
-                          _isPasswordVisible
-                              ? Icons.visibility
-                              : Icons.visibility_off,
-                        ),
+                        icon: Icon(_isPasswordVisible
+                            ? Icons.visibility
+                            : Icons.visibility_off),
                         onPressed: () {
                           setState(() {
-                            _isPasswordVisible = !_isPasswordVisible; // 비밀번호 가시성 토글
+                            _isPasswordVisible = !_isPasswordVisible;
                           });
                         },
                       ),
                     ),
-                    obscureText: !_isPasswordVisible, // 비밀번호 숨김 설정
+                    obscureText: !_isPasswordVisible,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter a password'; // 빈 값 검사
+                        return 'Please enter a password';
                       }
                       return null;
                     },
                   ),
-                  SizedBox(height: 16),
-
-                  // 비밀번호 확인 입력 필드
+                  const SizedBox(height: 16),
                   TextFormField(
                     controller: _confirmPasswordController,
                     decoration: InputDecoration(
                       labelText: 'Confirm Password',
                       suffixIcon: IconButton(
-                        icon: Icon(
-                          _isConfirmPasswordVisible
-                              ? Icons.visibility
-                              : Icons.visibility_off,
-                        ),
+                        icon: Icon(_isConfirmPasswordVisible
+                            ? Icons.visibility
+                            : Icons.visibility_off),
                         onPressed: () {
                           setState(() {
                             _isConfirmPasswordVisible =
-                            !_isConfirmPasswordVisible; // 비밀번호 확인 가시성 토글
+                            !_isConfirmPasswordVisible;
                           });
                         },
                       ),
                     ),
-                    obscureText: !_isConfirmPasswordVisible, // 비밀번호 확인 숨김 설정
+                    obscureText: !_isConfirmPasswordVisible,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please confirm your password'; // 빈 값 검사
+                        return 'Please confirm your password';
                       }
                       if (value != _passwordController.text) {
-                        return 'Passwords do not match'; // 비밀번호 일치 검사
+                        return 'Passwords do not match';
                       }
                       return null;
                     },
                   ),
-                  SizedBox(height: 16),
-
-                  // 이메일 주소 입력 필드
+                  const SizedBox(height: 16),
                   TextFormField(
                     controller: _emailController,
-                    decoration: InputDecoration(labelText: 'E-mail address'),
+                    decoration:
+                    const InputDecoration(labelText: 'E-mail address'),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter an email address'; // 빈 값 검사
+                        return 'Please enter an email address';
                       }
                       return null;
                     },
                   ),
-                  SizedBox(height: 16),
-
-                  // 회원가입 버튼
+                  const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () async {
                       if (_formKey.currentState!.validate()) {
-                        // 모든 필드가 유효한지 검사
-                        final email = _emailController.text;
+                        final nickname = _usernameController.text.trim();
+                        final email = _emailController.text.trim();
                         final password = _passwordController.text;
 
                         try {
-                          await authProvider.signUp(email, password); // 회원가입 시도
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Sign up successful!')),
+                          await ApiService.signUpUser(
+                            nickname: nickname,
+                            email: email,
+                            password: password,
                           );
-                          Navigator.pushReplacementNamed(context, '/sign-in'); // 로그인 화면으로 이동
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Sign up successful!')),
+                          );
+                          Navigator.pushReplacementNamed(context, '/sign-in');
                         } catch (e) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text('Error signing up: $e')),
@@ -150,29 +138,28 @@ class _SignUpPageState extends State<SignUpPage> {
                         }
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Please fill in all fields correctly')), // 필드가 잘못된 경우 경고 메시지
+                          const SnackBar(
+                            content: Text('Please fill in all fields correctly'),
+                          ),
                         );
                       }
                     },
                     child: const Text('Sign Up'),
                   ),
-                  SizedBox(height: 16),
-
-                  // 로그인 페이지로 이동하는 버튼
+                  const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('Have an account?'),
+                      const Text('Have an account?'),
                       TextButton(
                         onPressed: () {
-                          Navigator.pushNamed(context, '/sign-in'); // 로그인 페이지로 이동
+                          Navigator.pushNamed(context, '/sign-in');
                         },
-                        child: Text('Sign In'),
+                        child: const Text('Sign In'),
                       ),
                     ],
                   ),
                 ],
-
               ),
             ),
           ),

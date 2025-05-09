@@ -1,229 +1,266 @@
-// lib/screens/standard_plan_screen.dart
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import '../models/goal_model.dart';
 
-class StandardPlanScreen extends StatefulWidget {
-  /// 서버에서 받아올 JSON 데이터를 그대로 넣어주세요.
-  /// 형식:
-  /// {
-  ///   "tabs": [ {"id":"daily","label":"일일"}, {"id":"overall","label":"전체"} ],
-  ///   "period": {
-  ///     "startDate":"2025-05-01","endDate":"2025-05-31",
-  ///     "progressPercent":0.5
-  ///   },
-  ///   "dailyTasks":[
-  ///     {"id":"t1","title":"3시간 독서하기","status":"pending"},
-  ///     {"id":"t2","title":"아침 스트레칭","status":"ignored"}
-  ///   ],
-  ///   "fullPlan":[
-  ///     {
-  ///       "date":"2025-05-01",
-  ///       "tasks":[
-  ///         {"id":"t1","title":"3시간 독서하기","status":"done"},
-  ///         {"id":"t2","title":"저녁 산책","status":"pending"}
-  ///       ]
-  ///     },
-  ///     // ...
-  ///   ]
-  /// }
-  final Map<String, dynamic>? data;
-  const StandardPlanScreen({Key? key, this.data}) : super(key: key);
+enum TaskStatus { pending, done, ignored }
+//[
+//   {
+//     "date": "2025-05-09",
+//     "tasks": ["헬스장 1시간", "스트레칭 10분"]
+//   },
+//   {
+//     "date": "2025-05-11",
+//     "tasks": ["요가 30분"]
+//   }
+// ]
+class Task {
+  final String title;
+  TaskStatus status;
 
-  @override
-  _StandardPlanScreenState createState() => _StandardPlanScreenState();
+  Task({required this.title, this.status = TaskStatus.pending});
+
+  factory Task.fromJson(String title) => Task(title: title);
 }
 
-class _StandardPlanScreenState extends State<StandardPlanScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
-  late final List<TabInfo> _tabs;
-  late final double _progress;
-  late final List<Task> _dailyTasks;
-  late final List<PlanGroup> _fullPlan;
+class PlanGroup {
+  final DateTime date;
+  final List<Task> tasks;
 
-  Map<String, dynamic> get _sample => {
-    "tabs": [
-      {"id": "daily", "label": "일일"},
-      {"id": "overall", "label": "전체"},
-    ],
-    "period": {
-      "startDate": "2025-05-01",
-      "endDate": "2025-05-31",
-      "progressPercent": 0.4
-    },
-    "dailyTasks": [
-      {"id": "t1", "title": "3시간 독서하기", "status": "pending"},
-      {"id": "t2", "title": "아침 스트레칭 10분", "status": "ignored"},
-      {"id": "t3", "title": "저녁 산책 30분", "status": "done"},
-    ],
-    "fullPlan": [
-      {
-        "date": "2025-05-01",
-        "tasks": [
-          {"id": "t1", "title": "3시간 독서하기", "status": "done"},
-          {"id": "t2", "title": "저녁 산책", "status": "pending"},
-        ]
-      },
-      {
-        "date": "2025-05-02",
-        "tasks": [
-          {"id": "t3", "title": "아침 스트레칭", "status": "ignored"},
-        ]
-      }
-    ]
-  };
+  PlanGroup({required this.date, required this.tasks});
+
+  factory PlanGroup.fromJson(Map<String, dynamic> json) {
+    final date = DateTime.parse(json['date']);
+    final tasks = (json['tasks'] as List).map((t) => Task.fromJson(t)).toList();
+    return PlanGroup(date: date, tasks: tasks);
+  }
+}
+
+class UserImprovementScreen extends StatefulWidget {
+  final GoalModel goalModel;
+
+  const UserImprovementScreen({Key? key, required this.goalModel}) : super(key: key);
+
+  @override
+  State<UserImprovementScreen> createState() => _UserImprovementScreenState();
+}
+
+class _UserImprovementScreenState extends State<UserImprovementScreen> with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+  List<PlanGroup> _fullPlan = [];
+  List<Task> _dailyTasks = [];
+  double _todayProgress = 0;
+  double _overallProgress = 0;
+
+  Duration? _initialDuration;
+  Duration _remaining = Duration.zero;
+  Timer? _timer;
+  final TextEditingController _minutesController = TextEditingController(text: '10');
 
   @override
   void initState() {
     super.initState();
-    final json = widget.data ?? _sample;
-
-    // Tabs
-    _tabs = (json['tabs'] as List<dynamic>? ?? [])
-        .map((e) => TabInfo.fromJson(e as Map<String, dynamic>))
-        .toList();
-
-    // Progress
-    _progress = ((json['period'] as Map<String, dynamic>?)?['progressPercent']
-    as num? ??
-        _sample['period']['progressPercent'])
-        .toDouble();
-
-    // Daily tasks
-    _dailyTasks = (json['dailyTasks'] as List<dynamic>? ?? [])
-        .map((e) => Task.fromJson(e as Map<String, dynamic>))
-        .toList();
-
-    // Full plan
-    _fullPlan = (json['fullPlan'] as List<dynamic>? ?? [])
-        .map((e) => PlanGroup.fromJson(e as Map<String, dynamic>))
-        .toList();
-
-    _tabController = TabController(length: _tabs.length, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
+    _fetchGPTPlan();
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+  Future<void> _fetchGPTPlan() async {
+    try {
+      final url = Uri.parse('http://###.###.#.#:8080/api/generate-plan'); // 서버 주소 수정 필요
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({"goalId": widget.goalModel.id}), // goalId 필요
+      );
+
+      if (response.statusCode == 200) {
+        final jsonPlan = jsonDecode(response.body);
+        _applyPlanFromJson(jsonPlan);
+      } else {
+        throw Exception('서버 오류: ${response.statusCode}');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('계획 불러오기 실패: $e')));
+    }
   }
 
-  void _toggle(Task task) {
+  void _applyPlanFromJson(List<dynamic> jsonPlan) {
+    _fullPlan = jsonPlan.map((e) => PlanGroup.fromJson(e)).toList();
+    _fullPlan.sort((a, b) => a.date.compareTo(b.date));
+
+    final today = DateTime.now();
+    final todayGroup = _fullPlan.firstWhere(
+          (g) => g.date.year == today.year &&
+          g.date.month == today.month &&
+          g.date.day == today.day,
+      orElse: () => PlanGroup(date: today, tasks: []),
+    );
+
+    _dailyTasks = todayGroup.tasks;
+    _calculateProgress();
+  }
+
+  void _calculateProgress() {
+    final todayDone = _dailyTasks.where((t) => t.status == TaskStatus.done).length;
+    _todayProgress = _dailyTasks.isNotEmpty ? todayDone / _dailyTasks.length : 0;
+
+    final allTasks = _fullPlan.expand((g) => g.tasks).toList();
+    final totalDone = allTasks.where((t) => t.status == TaskStatus.done).length;
+    _overallProgress = allTasks.isNotEmpty ? totalDone / allTasks.length : 0;
+
+    setState(() {});
+  }
+
+  void _onTaskAction(Task task) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(task.title),
+        content: const Text('상태를 선택하세요'),
+        actions: [
+          TextButton(onPressed: () => _updateTask(task, TaskStatus.done), child: const Text('완료')),
+          TextButton(onPressed: () => _updateTask(task, TaskStatus.ignored), child: const Text('실패')),
+        ],
+      ),
+    );
+  }
+
+  void _updateTask(Task task, TaskStatus status) {
     setState(() {
-      task.status = (task.status == 'done') ? 'pending' : 'done';
+      task.status = status;
+      _calculateProgress();
     });
+    Navigator.pop(context);
+  }
+
+  void _showTimerSettingDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('타이머 설정 (분)'),
+        content: TextField(
+          controller: _minutesController,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(labelText: '분', hintText: '예: 10'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('취소')),
+          TextButton(
+            onPressed: () {
+              final minutes = int.tryParse(_minutesController.text) ?? 10;
+              setState(() => _initialDuration = Duration(minutes: minutes));
+              Navigator.pop(context);
+            },
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _startTimer() {
+    if (_initialDuration == null) _initialDuration = const Duration(minutes: 10);
+    _timer?.cancel();
+    setState(() => _remaining = _initialDuration!);
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_remaining.inSeconds == 0) {
+        timer.cancel();
+      } else {
+        setState(() => _remaining -= const Duration(seconds: 1));
+      }
+    });
+  }
+
+  void _stopTimer() {
+    _timer?.cancel();
+    setState(() => _remaining = Duration.zero);
+  }
+
+  String get _timeString {
+    final m = _remaining.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = _remaining.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return "$m:$s";
+  }
+
+  Color _statusColor(TaskStatus status) {
+    switch (status) {
+      case TaskStatus.done:
+        return Colors.green;
+      case TaskStatus.ignored:
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  IconData _statusIcon(TaskStatus status) {
+    switch (status) {
+      case TaskStatus.done:
+        return Icons.check_circle;
+      case TaskStatus.ignored:
+        return Icons.block;
+      default:
+        return Icons.circle_outlined;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final tabWidth = screenWidth * 0.7;
-
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () => {/* side menu */},
-        ),
-        title: SizedBox(
-          width: tabWidth,
-          child: TabBar(
-            controller: _tabController,
-            isScrollable: true,
-            indicatorColor: Colors.white,
-            tabs: _tabs.map((t) => Tab(text: t.label)).toList(),
+        title: const Text('개선 계획 보기'),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.timer),
+            onPressed: _showTimerSettingDialog,
           ),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [Tab(text: '일일'), Tab(text: '전체')],
         ),
       ),
       body: Column(
         children: [
-          // 진행률 표시
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Stack(
-              alignment: Alignment.center,
+            padding: const EdgeInsets.all(16),
+            child: Column(
               children: [
-                Container(
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: LinearProgressIndicator(
-                      value: _progress,
-                      backgroundColor: Colors.transparent,
-                      minHeight: 20,
-                    ),
-                  ),
-                ),
-                Text(
-                  '${(_progress * 100).round()}%',
-                  style: const TextStyle(
-                      color: Colors.black, fontWeight: FontWeight.bold),
+                Text('오늘 진행률'),
+                LinearProgressIndicator(value: _todayProgress),
+                Text('${(_todayProgress * 100).round()}%'),
+                const SizedBox(height: 8),
+                Text('전체 진행률'),
+                LinearProgressIndicator(value: _overallProgress),
+                Text('${(_overallProgress * 100).round()}%'),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('타이머: $_timeString', style: const TextStyle(fontSize: 16)),
+                Row(
+                  children: [
+                    ElevatedButton(onPressed: _startTimer, child: const Text('시작')),
+                    const SizedBox(width: 8),
+                    ElevatedButton(onPressed: _stopTimer, child: const Text('중지')),
+                  ],
                 ),
               ],
             ),
           ),
-
-          // 탭 컨텐츠
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
-                // 일일 목표
-                ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: _dailyTasks.length,
-                  itemBuilder: (_, i) {
-                    final t = _dailyTasks[i];
-                    final ignored = t.status == 'ignored';
-                    return ListTile(
-                      leading: Checkbox(
-                        value: t.status == 'done',
-                        onChanged: (_) => _toggle(t),
-                        fillColor: ignored
-                            ? MaterialStateProperty.all(Colors.red)
-                            : null,
-                      ),
-                      title: Text(
-                        t.title,
-                        style: TextStyle(color: ignored ? Colors.red : null),
-                      ),
-                    );
-                  },
-                ),
-
-                // 전체 목표 (캘린더 느낌)
-                ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  children: _fullPlan.map((group) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          group.date,
-                          style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 4),
-                        ...group.tasks.map((t) {
-                          return ListTile(
-                            leading: Checkbox(
-                              value: t.status == 'done',
-                              onChanged: (_) => _toggle(t),
-                            ),
-                            title: Text(t.title),
-                            tileColor: t.status == 'ignored'
-                                ? Colors.red.withOpacity(0.1)
-                                : null,
-                          );
-                        }),
-                        const Divider(),
-                      ],
-                    );
-                  }).toList(),
-                ),
+                _buildTaskList(_dailyTasks),
+                _buildAllPlanList(),
               ],
             ),
           ),
@@ -231,31 +268,51 @@ class _StandardPlanScreenState extends State<StandardPlanScreen>
       ),
     );
   }
-}
 
-class TabInfo {
-  final String id, label;
-  TabInfo({required this.id, required this.label});
-  factory TabInfo.fromJson(Map<String, dynamic> j) =>
-      TabInfo(id: j['id'], label: j['label']);
-}
+  Widget _buildTaskList(List<Task> tasks) {
+    if (tasks.isEmpty) return const Center(child: Text('오늘 할 일이 없습니다.'));
+    return ListView.builder(
+      itemCount: tasks.length,
+      itemBuilder: (_, i) {
+        final task = tasks[i];
+        return ListTile(
+          leading: Icon(_statusIcon(task.status), color: _statusColor(task.status)),
+          title: Text(
+            task.title,
+            style: TextStyle(
+              decoration: task.status == TaskStatus.done ? TextDecoration.lineThrough : null,
+              color: task.status == TaskStatus.ignored ? Colors.red : null,
+            ),
+          ),
+          onTap: () => _onTaskAction(task),
+        );
+      },
+    );
+  }
 
-class Task {
-  final String id, title;
-  String status; // "done" | "pending" | "ignored"
-  Task({required this.id, required this.title, required this.status});
-  factory Task.fromJson(Map<String, dynamic> j) => Task(
-      id: j['id'], title: j['title'], status: j['status']);
-}
-
-class PlanGroup {
-  final String date;
-  final List<Task> tasks;
-  PlanGroup({required this.date, required this.tasks});
-  factory PlanGroup.fromJson(Map<String, dynamic> j) => PlanGroup(
-    date: j['date'],
-    tasks: (j['tasks'] as List)
-        .map((e) => Task.fromJson(e as Map<String, dynamic>))
-        .toList(),
-  );
+  Widget _buildAllPlanList() {
+    if (_fullPlan.isEmpty) return const Center(child: Text('계획이 없습니다.'));
+    return ListView.builder(
+      itemCount: _fullPlan.length,
+      itemBuilder: (_, i) {
+        final group = _fullPlan[i];
+        final formattedDate = '${group.date.year}-${group.date.month.toString().padLeft(2, '0')}-${group.date.day.toString().padLeft(2, '0')}';
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Text(formattedDate, style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+            ...group.tasks.map((task) => ListTile(
+              leading: Icon(_statusIcon(task.status), color: _statusColor(task.status)),
+              title: Text(task.title),
+              onTap: () => _onTaskAction(task),
+            )),
+            const Divider(),
+          ],
+        );
+      },
+    );
+  }
 }

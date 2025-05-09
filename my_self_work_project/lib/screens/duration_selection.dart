@@ -19,7 +19,7 @@ class DurationSelectionScreen extends StatelessWidget {
           return ListTile(
             title: Text(duration),
             onTap: () {
-              goalModel.duration = duration;
+              goalModel.period = duration;
               Navigator.push(
                 context,
                 MaterialPageRoute(

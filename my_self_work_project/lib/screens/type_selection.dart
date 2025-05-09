@@ -27,7 +27,7 @@ class TypeSelectionScreen extends StatelessWidget {
         children: types.map((type) {
           return GestureDetector(
             onTap: () {
-              goalModel.type = type;
+              goalModel.keyword = type; // ✅ 수정: type → keyword
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -36,7 +36,13 @@ class TypeSelectionScreen extends StatelessWidget {
               );
             },
             child: Card(
-              child: Center(child: Text(type, style: const TextStyle(fontSize: 16))),
+              child: Center(
+                child: Text(
+                  type,
+                  style: const TextStyle(fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+              ),
             ),
           );
         }).toList(),

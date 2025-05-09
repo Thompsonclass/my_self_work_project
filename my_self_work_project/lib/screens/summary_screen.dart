@@ -3,8 +3,6 @@ import '../models/goal_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'user_improvement_test.dart';
-//import 'user_improvement.dart';
-
 
 class SummaryScreen extends StatelessWidget {
   final GoalModel goalModel;
@@ -20,24 +18,36 @@ class SummaryScreen extends StatelessWidget {
       return;
     }
 
-    final url = Uri.parse('http://###.###.#.#:8080/keywords');
-    //final body = jsonEncode(goalModel.toJson(user.uid)); // 주석 해제
+    final userEmail = user.email;
+    if (userEmail == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('이메일 정보를 가져올 수 없습니다.')),
+      );
+      return;
+    }
+
+    goalModel.email = userEmail;
+
+    final url = Uri.parse('http://192.168.0.5:8080/api/goals');
 
     try {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        //body: body,
+        body: goalModel.toJsonString(),
       );
-      if (response.statusCode == 200) {
-        await showDialog(
+
+      print("응답 코드: ${response.statusCode}");
+      print("응답 내용: ${response.body}");
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        showDialog(
           context: context,
           builder: (_) => const AlertDialog(
             title: Text('성공'),
             content: Text('목표가 서버에 저장되었습니다.'),
           ),
         );
-        Navigator.popUntil(context, (route) => route.isFirst);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('서버 오류: ${response.statusCode}')),
@@ -52,8 +62,6 @@ class SummaryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final weekdayLabels = ['월', '화', '수', '목', '금', '토', '일'];
-
     return Scaffold(
       appBar: AppBar(title: const Text('최종 확인 (5단계)')),
       body: Padding(
@@ -67,48 +75,29 @@ class SummaryScreen extends StatelessWidget {
               subtitle: Text(goalModel.category ?? '-'),
             ),
             const Divider(),
-
             ListTile(
               leading: const Icon(Icons.style),
-              title: const Text('유형'),
-              subtitle: Text(goalModel.type ?? '-'),
+              title: const Text('키워드'),
+              subtitle: Text(goalModel.keyword ?? '-'),
             ),
             const Divider(),
-
             ListTile(
               leading: const Icon(Icons.schedule),
               title: const Text('기간'),
-              subtitle: Text(goalModel.duration ?? '-'),
+              subtitle: Text(goalModel.period ?? '-'),
             ),
             const Divider(),
-
             ListTile(
               leading: const Icon(Icons.repeat),
               title: const Text('주당 횟수'),
               subtitle: Text(
-                goalModel.weeklyCount != null
-                    ? '${goalModel.weeklyCount}회'
+                goalModel.sessionsPerWeek != null
+                    ? '\${goalModel.sessionsPerWeek}회'
                     : '-',
               ),
             ),
             const Divider(),
-
-            ListTile(
-              leading: const Icon(Icons.calendar_today),
-              title: const Text('선택된 요일'),
-              subtitle: goalModel.selectedWeekdays != null && goalModel.selectedWeekdays!.isNotEmpty
-                  ? Wrap(
-                spacing: 6,
-                children: goalModel.selectedWeekdays!
-                    .map((i) => Chip(label: Text(weekdayLabels[i])))
-                    .toList(),
-              )
-                  : const Text('-'),
-            ),
-
             const Spacer(),
-
-            // 서버 전송 버튼
             ElevatedButton.icon(
               icon: const Icon(Icons.send),
               label: const Text('서버로 전송'),
@@ -117,10 +106,7 @@ class SummaryScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
             ),
-
             const SizedBox(height: 12),
-
-            // 개인 난이도 세부 설정 화면으로 이동
             OutlinedButton.icon(
               icon: const Icon(Icons.settings),
               label: const Text('표준 자기계발 UI'),
