@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/goal_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:http/http.dart' as http;
+import '../services/api_service.dart';
 import 'user_improvement_test.dart';
 
 class SummaryScreen extends StatelessWidget {
@@ -28,31 +28,16 @@ class SummaryScreen extends StatelessWidget {
 
     goalModel.email = userEmail;
 
-    final url = Uri.parse('http://192.168.0.5:8080/api/goals');
-
     try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: goalModel.toJsonString(),
+      await ApiService.postGoal(goalModel.toJsonString());
+
+      showDialog(
+        context: context,
+        builder: (_) => const AlertDialog(
+          title: Text('성공'),
+          content: Text('목표가 서버에 저장되었습니다.'),
+        ),
       );
-
-      print("응답 코드: ${response.statusCode}");
-      print("응답 내용: ${response.body}");
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        showDialog(
-          context: context,
-          builder: (_) => const AlertDialog(
-            title: Text('성공'),
-            content: Text('목표가 서버에 저장되었습니다.'),
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('서버 오류: ${response.statusCode}')),
-        );
-      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('에러 발생: $e')),
