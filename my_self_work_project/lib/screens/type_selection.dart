@@ -7,10 +7,10 @@ class TypeSelectionScreen extends StatelessWidget {
 
   TypeSelectionScreen({required this.goalModel});
 
-  final Map<String, List<String>> typesByCategory = {
-    '건강': ['운동 루틴', '식단 관리', '수면 관리'],
-    '생활': ['청소 루틴', '금연', '시간 관리'],
-    '공부': ['자격증 공부', '영어 학습', '독서'],
+  final Map<String, List<String>> typesByCategory = { 
+    '건강': ['다이어트 ', '근력운동'], // 수정
+    '생활': ['금연', '독서'], //  수정 
+    '공부': ['영단어 외우기', '자격증'], // 수정
   };
 
   @override
