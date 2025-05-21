@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/api_service.dart';
 
 class SignUpPage extends StatefulWidget {
@@ -13,7 +14,7 @@ class _SignUpPageState extends State<SignUpPage> {
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
 
-  final _usernameController = TextEditingController();
+  final _usernameController = TextEditingController(); // 닉네임
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _emailController = TextEditingController();
@@ -41,10 +42,21 @@ class _SignUpPageState extends State<SignUpPage> {
                 children: [
                   TextFormField(
                     controller: _usernameController,
-                    decoration: const InputDecoration(labelText: 'Username'),
+                    decoration: const InputDecoration(labelText: '닉네임'),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter a username';
+                        return '닉네임을 입력해주세요';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _emailController,
+                    decoration: const InputDecoration(labelText: '이메일'),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return '이메일을 입력해주세요';
                       }
                       return null;
                     },
@@ -53,7 +65,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   TextFormField(
                     controller: _passwordController,
                     decoration: InputDecoration(
-                      labelText: 'Password',
+                      labelText: '비밀번호',
                       suffixIcon: IconButton(
                         icon: Icon(_isPasswordVisible
                             ? Icons.visibility
@@ -68,7 +80,7 @@ class _SignUpPageState extends State<SignUpPage> {
                     obscureText: !_isPasswordVisible,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter a password';
+                        return '비밀번호를 입력해주세요';
                       }
                       return null;
                     },
@@ -77,7 +89,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   TextFormField(
                     controller: _confirmPasswordController,
                     decoration: InputDecoration(
-                      labelText: 'Confirm Password',
+                      labelText: '비밀번호 확인',
                       suffixIcon: IconButton(
                         icon: Icon(_isConfirmPasswordVisible
                             ? Icons.visibility
@@ -93,22 +105,10 @@ class _SignUpPageState extends State<SignUpPage> {
                     obscureText: !_isConfirmPasswordVisible,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please confirm your password';
+                        return '비밀번호 확인이 필요합니다';
                       }
                       if (value != _passwordController.text) {
-                        return 'Passwords do not match';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _emailController,
-                    decoration:
-                    const InputDecoration(labelText: 'E-mail address'),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter an email address';
+                        return '비밀번호가 일치하지 않습니다';
                       }
                       return null;
                     },
@@ -122,40 +122,49 @@ class _SignUpPageState extends State<SignUpPage> {
                         final password = _passwordController.text;
 
                         try {
-                          await ApiService.signUpUser(
-                            nickname: nickname,
+                          // 1. Firebase 회원가입
+                          await FirebaseAuth.instance
+                              .createUserWithEmailAndPassword(
                             email: email,
                             password: password,
                           );
+
+                          final user = FirebaseAuth.instance.currentUser!;
+                          final uid = user.uid;
+                          final provider =
+                              user.providerData[0].providerId; // ex. "password"
+
+                          // 2. Spring 서버에 회원 정보 저장
+                          await ApiService.signUpUser(
+                            nickname: nickname,
+                            email: email,
+                            uid: uid,
+                            provider: provider,
+                          );
+
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Sign up successful!')),
+                            const SnackBar(content: Text('회원가입 완료!')),
                           );
                           Navigator.pushReplacementNamed(context, '/sign-in');
                         } catch (e) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error signing up: $e')),
+                            SnackBar(content: Text('회원가입 실패: $e')),
                           );
                         }
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please fill in all fields correctly'),
-                          ),
-                        );
                       }
                     },
-                    child: const Text('Sign Up'),
+                    child: const Text('회원가입'),
                   ),
                   const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text('Have an account?'),
+                      const Text('이미 계정이 있으신가요?'),
                       TextButton(
                         onPressed: () {
                           Navigator.pushNamed(context, '/sign-in');
                         },
-                        child: const Text('Sign In'),
+                        child: const Text('로그인'),
                       ),
                     ],
                   ),

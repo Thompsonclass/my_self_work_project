@@ -4,13 +4,24 @@ import 'dart:convert';
 class GoalSession {
   final String sessionDay;
   final String dailyGoalDetail;
+  final String? tip;
+  final DateTime sessionDate;
 
-  GoalSession({required this.sessionDay, required this.dailyGoalDetail});
+  GoalSession({
+    required this.sessionDay,
+    required this.dailyGoalDetail,
+    required this.sessionDate,
+    this.tip,
+  });
 
-  Map<String, dynamic> toJson() => {
-    "sessionDay": sessionDay,
-    "dailyGoalDetail": dailyGoalDetail,
-  };
+  factory GoalSession.fromJson(Map<String, dynamic> json) {
+    return GoalSession(
+      sessionDay: json['sessionDay'],
+      dailyGoalDetail: json['dailyGoalDetail'],
+      tip: json['tip'],
+      sessionDate: DateTime.parse(json['sessionDate']),
+    );
+  }
 }
 
 class GoalModel {
@@ -34,23 +45,19 @@ class GoalModel {
     this.selectedWeekdays,
   });
 
-  List<String>? get selectedWeekdayLabels {
-    if (selectedWeekdays == null) return null;
-    const weekdayLabels = ['일', '월', '화', '수', '목', '금', '토'];
-    return selectedWeekdays!.map((i) => weekdayLabels[i]).toList();
-  }
-
   Map<String, dynamic> toJson() {
     return {
       "email": email,
       "category": category,
       "keyword": keyword,
       "period": period,
-      "includeWeekend": true,
-      "selectedWeekdays": selectedWeekdayLabels,
       "sessionsPerWeek": sessionsPerWeek,
+      "selectedDays": selectedWeekdays?.map((i) => weekdayLabel[i]).toList() ?? [],
     };
   }
+
+  static const List<String> weekdayLabel = ['월', '화', '수', '목', '금', '토', '일'];
+
 
   String toJsonString() => jsonEncode(toJson());
 }

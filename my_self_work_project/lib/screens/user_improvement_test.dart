@@ -1,13 +1,17 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../models/goal_model.dart';
+import '../services/api_service.dart';
 
 enum TaskStatus { pending, done, ignored }
 
 class Task {
   final String title;
+  final String tip;
   TaskStatus status;
-  Task({required this.title, this.status = TaskStatus.pending});
+
+  Task({required this.title, required this.tip, this.status = TaskStatus.pending});
 }
 
 class PlanGroup {
@@ -29,8 +33,8 @@ class _UserImprovementScreenState extends State<UserImprovementScreen> with Sing
   double _todayProgress = 0;
   double _overallProgress = 0;
 
-  late List<Task> _dailyTasks;
-  late List<PlanGroup> _fullPlan;
+  List<Task> _dailyTasks = [];
+  List<PlanGroup> _fullPlan = [];
 
   Duration? _initialDuration;
   Duration _remaining = Duration.zero;
@@ -53,67 +57,31 @@ class _UserImprovementScreenState extends State<UserImprovementScreen> with Sing
     super.dispose();
   }
 
-  int _durationInDays(String? duration) {
-    switch (duration) {
-      case '2주일':
-        return 14;
-      case '한 달':
-        return 30;
-      case '1주일':
-      default:
-        return 7;
-    }
+  bool isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
-  int toUserWeekday(int dartWeekday) {
-    return dartWeekday - 1; // 1(월) → 0, 2(화) → 1, ..., 7(일) → 6
-  }
+  Future<void> _initData() async {
+    final email = widget.goalModel.email;
+    if (email == null) return;
 
-  void _initData() {
-    final goal = widget.goalModel;
+    final rawSessions = await ApiService.fetchSessions(email);
     final today = DateTime.now();
-    final String taskTitle = goal.keyword != null ? '오늘의 ${goal.keyword!}' : '자기계발 태스크';
-    final selectedDays = goal.selectedWeekdays ?? [];
-    final weeklyCount = goal.sessionsPerWeek ?? 1;
-    final totalDays = _durationInDays(goal.period);
-    final totalWeeks = (totalDays / 7).ceil();
 
-    _fullPlan = [];
-
-    for (int week = 0; week < totalWeeks; week++) {
-      final weekStart = today.add(Duration(days: week * 7));
-
-      final base = weeklyCount ~/ selectedDays.length;
-      final extra = weeklyCount % selectedDays.length;
-
-      for (int i = 0; i < selectedDays.length; i++) {
-        final userWeekday = selectedDays[i];
-
-        // 각 주의 시작일 기준으로 해당 요일 날짜 계산
-        DateTime targetDate = weekStart;
-        while (toUserWeekday(targetDate.weekday) != userWeekday) {
-          targetDate = targetDate.add(const Duration(days: 1));
-        }
-
-        if (targetDate.difference(today).inDays >= totalDays) continue;
-
-        final taskCount = base + (i < extra ? 1 : 0);
-        _fullPlan.add(
-          PlanGroup(
-            date: targetDate,
-            tasks: List.generate(taskCount, (_) => Task(title: taskTitle)),
-          ),
-        );
-      }
+    final grouped = <DateTime, List<Task>>{};
+    for (var s in rawSessions) {
+      final date = DateTime.parse(s['date']).toLocal();
+      final task = Task(title: s['title'], tip: s['tip'] ?? '');
+      grouped.putIfAbsent(date, () => []).add(task);
     }
 
-    _fullPlan.sort((a, b) => a.date.compareTo(b.date));
+    _fullPlan = grouped.entries
+        .map((e) => PlanGroup(date: e.key, tasks: e.value))
+        .toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
 
     final todayGroup = _fullPlan.firstWhere(
-          (g) =>
-      g.date.year == today.year &&
-          g.date.month == today.month &&
-          g.date.day == today.day,
+          (g) => isSameDay(g.date, today),
       orElse: () => PlanGroup(date: today, tasks: []),
     );
 
@@ -325,6 +293,7 @@ class _UserImprovementScreenState extends State<UserImprovementScreen> with Sing
                           color: task.status == TaskStatus.ignored ? Colors.red : null,
                         ),
                       ),
+                      subtitle: task.tip.isNotEmpty ? Text(task.tip) : null,
                     );
                   },
                 ),
@@ -348,6 +317,7 @@ class _UserImprovementScreenState extends State<UserImprovementScreen> with Sing
                             t.title,
                             style: TextStyle(decoration: t.status == TaskStatus.done ? TextDecoration.lineThrough : null),
                           ),
+                          subtitle: t.tip.isNotEmpty ? Text(t.tip) : null,
                           onTap: () => _onTaskAction(t),
                         )),
                         const Divider(),

@@ -4,14 +4,20 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'user_improvement_test.dart';
 
-class SummaryScreen extends StatelessWidget {
+class SummaryScreen extends StatefulWidget {
   final GoalModel goalModel;
 
   const SummaryScreen({required this.goalModel, Key? key}) : super(key: key);
 
-  void sendGoalToServer(BuildContext context) async {
+  @override
+  State<SummaryScreen> createState() => _SummaryScreenState();
+}
+
+class _SummaryScreenState extends State<SummaryScreen> {
+  void sendGoalToServer() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('로그인이 필요합니다.')),
       );
@@ -20,25 +26,25 @@ class SummaryScreen extends StatelessWidget {
 
     final userEmail = user.email;
     if (userEmail == null) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('이메일 정보를 가져올 수 없습니다.')),
       );
       return;
     }
 
-    goalModel.email = userEmail;
+    widget.goalModel.email = userEmail;
 
-    final url = Uri.parse('http://192.168.0.5:8080/api/goals');
+    final url = Uri.parse('http://192.168.208.229:8080/api/goals/finalize');
 
     try {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: goalModel.toJsonString(),
+        body: widget.goalModel.toJsonString(),
       );
 
-      print("응답 코드: ${response.statusCode}");
-      print("응답 내용: ${response.body}");
+      if (!mounted) return;
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         showDialog(
@@ -54,6 +60,7 @@ class SummaryScreen extends StatelessWidget {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('에러 발생: $e')),
       );
@@ -62,6 +69,8 @@ class SummaryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final goalModel = widget.goalModel;
+
     return Scaffold(
       appBar: AppBar(title: const Text('최종 확인 (5단계)')),
       body: Padding(
@@ -90,20 +99,19 @@ class SummaryScreen extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.repeat),
               title: const Text('주당 횟수'),
-              subtitle: Text(
-                goalModel.sessionsPerWeek != null
-                    ? '\${goalModel.sessionsPerWeek}회'
-                    : '-',
-              ),
+              subtitle: Text(goalModel.sessionsPerWeek != null
+                  ? '${goalModel.sessionsPerWeek}회'
+                  : '-'),
             ),
             const Divider(),
             const Spacer(),
             ElevatedButton.icon(
               icon: const Icon(Icons.send),
               label: const Text('서버로 전송'),
-              onPressed: () => sendGoalToServer(context),
+              onPressed: sendGoalToServer,
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding:
+                const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
             ),
             const SizedBox(height: 12),
@@ -114,12 +122,14 @@ class SummaryScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => UserImprovementScreen(goalModel: goalModel),
+                    builder: (_) =>
+                        UserImprovementScreen(goalModel: goalModel),
                   ),
                 );
               },
               style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding:
+                const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
             ),
           ],
