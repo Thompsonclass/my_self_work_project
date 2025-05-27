@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:my_self_work_project/widgets/auth_gate.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'models/goal_model.dart';
@@ -23,6 +24,9 @@ import 'screens/summary_screen.dart';
 
 import 'screens/user_improvement_test.dart';
 
+import 'screens/user_setting_screen.dart'; // 사용자 계정
+import 'screens/user_stat_screen.dart'; // 사용자 목표 축적
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -44,7 +48,8 @@ class MyApp extends StatelessWidget {
         theme: ThemeData(
           primarySwatch: Colors.blue,
         ),
-        initialRoute: '/sign-up', // 기본 화면은 회원가입 화면으로 시작
+        //핵심! 초기 화면을 AuthGate로 설정
+        home: const AuthGate(),
         routes: {
           '/sign-in': (context) => SignInPage(), // 로그인 화면 경로
           '/sign-up': (context) => SignUpPage(), // 회원가입 화면 경로
@@ -67,6 +72,10 @@ class MyApp extends StatelessWidget {
 
           //메인
           '/improvement': (context) => UserImprovementScreen(goalModel: GoalModel(),),
+
+          // 계정 및 축적
+          '/setting': (context) => UserSettingsScreen(),
+          '/stat': (context) => UserStatsScreen(),
         },
         debugShowCheckedModeBanner: false,
       ),

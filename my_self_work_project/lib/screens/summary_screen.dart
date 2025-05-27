@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../models/goal_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
+import 'gpt_generating_screen.dart';
 import 'user_improvement_test.dart';
+import '../constants.dart';
 
 class SummaryScreen extends StatefulWidget {
   final GoalModel goalModel;
@@ -15,8 +17,15 @@ class SummaryScreen extends StatefulWidget {
 
 class _SummaryScreenState extends State<SummaryScreen> {
   void sendGoalToServer() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const GPTGeneratingScreen(message: 'GPT가 목표를 정리하고 있습니다...'),
+    );
+
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
+    if (user == null || user.email == null) {
+      Navigator.pop(context); // 로딩 화면 닫기
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('로그인이 필요합니다.')),
@@ -24,18 +33,9 @@ class _SummaryScreenState extends State<SummaryScreen> {
       return;
     }
 
-    final userEmail = user.email;
-    if (userEmail == null) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('이메일 정보를 가져올 수 없습니다.')),
-      );
-      return;
-    }
+    widget.goalModel.email = user.email;
 
-    widget.goalModel.email = userEmail;
-
-    final url = Uri.parse('http://192.168.208.229:8080/api/goals/finalize');
+    final url = Uri.parse(ApiConstants.finalizeGoal);
 
     try {
       final response = await http.post(
@@ -45,13 +45,14 @@ class _SummaryScreenState extends State<SummaryScreen> {
       );
 
       if (!mounted) return;
+      Navigator.pop(context); // 로딩 화면 닫기
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         showDialog(
           context: context,
-          builder: (_) => const AlertDialog(
-            title: Text('성공'),
-            content: Text('목표가 서버에 저장되었습니다.'),
+          builder: (_) => AlertDialog(
+            title: const Text('성공'),
+            content: const Text('목표가 서버에 저장되었습니다.'),
           ),
         );
       } else {
@@ -61,75 +62,105 @@ class _SummaryScreenState extends State<SummaryScreen> {
       }
     } catch (e) {
       if (!mounted) return;
+      Navigator.pop(context); // 로딩 화면 닫기
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('에러 발생: $e')),
       );
     }
   }
 
+  Widget _buildSummaryTile(IconData icon, String title, String value) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ListTile(
+        leading: Icon(icon, color: Colors.blueAccent),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(value, style: const TextStyle(fontSize: 16)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final goalModel = widget.goalModel;
+    final goal = widget.goalModel;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('최종 확인 (5단계)')),
+      appBar: AppBar(
+        title: const Text('최종 확인 (5단계)'),
+        centerTitle: true,
+        backgroundColor: Colors.blueAccent,
+      ),
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ListTile(
-              leading: const Icon(Icons.category),
-              title: const Text('카테고리'),
-              subtitle: Text(goalModel.category ?? '-'),
+            _buildSummaryTile(Icons.category, '카테고리', goal.category ?? '-'),
+            _buildSummaryTile(Icons.style, '키워드', goal.keyword ?? '-'),
+            _buildSummaryTile(Icons.schedule, '기간', goal.period ?? '-'),
+            _buildSummaryTile(
+              Icons.repeat,
+              '주당 횟수',
+              goal.sessionsPerWeek != null ? '${goal.sessionsPerWeek}회' : '-',
             ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.style),
-              title: const Text('키워드'),
-              subtitle: Text(goalModel.keyword ?? '-'),
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.schedule),
-              title: const Text('기간'),
-              subtitle: Text(goalModel.period ?? '-'),
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.repeat),
-              title: const Text('주당 횟수'),
-              subtitle: Text(goalModel.sessionsPerWeek != null
-                  ? '${goalModel.sessionsPerWeek}회'
-                  : '-'),
-            ),
-            const Divider(),
             const Spacer(),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.send),
-              label: const Text('서버로 전송'),
-              onPressed: sendGoalToServer,
-              style: ElevatedButton.styleFrom(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+
+            SizedBox( // Flutter -> Spring -> GPT -> Spring -> DB
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.send),
+                label: const Text('서버로 전송'),
+                onPressed: sendGoalToServer,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueAccent,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
+
             const SizedBox(height: 12),
-            OutlinedButton.icon(
-              icon: const Icon(Icons.settings),
-              label: const Text('표준 자기계발 UI'),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        UserImprovementScreen(goalModel: goalModel),
+
+            SizedBox( // Flutter -> Spring -> DB -> Spring -> Flutter
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.settings),
+                label: const Text('표준 자기계발 UI'),
+                onPressed: () async {
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (_) => const GPTGeneratingScreen(message: '표준 UI를 준비 중입니다...'),
+                  );
+
+                  await Future.delayed(const Duration(seconds: 2)); // 만약 처리 시간이 있다면
+
+                  if (!mounted) return;
+                  Navigator.pop(context); // 로딩 닫기
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => UserImprovementScreen(goalModel: goal),
+                    ),
+                  );
+                },
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                );
-              },
-              style: OutlinedButton.styleFrom(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  side: const BorderSide(color: Colors.blueAccent),
+                  textStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
             ),
           ],

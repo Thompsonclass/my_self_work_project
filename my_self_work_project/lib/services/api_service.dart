@@ -1,43 +1,44 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../constants.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://192.168.208.229:8080';
-
   static Future<List<dynamic>> fetchPlanFromGPT(String userEmail) async {
-    final url = Uri.parse('$baseUrl/api/goals');
+    final url = Uri.parse(ApiConstants.fetchGoal);
+
     final response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({"email": userEmail}),
     );
 
-
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
-      throw Exception('계획 불러오기 실패: \${response.statusCode}');
+      throw Exception('계획 불러오기 실패: ${response.statusCode}');
     }
   }
 
   static Future<List<Map<String, dynamic>>> fetchSessions(String email) async {
-    final url = Uri.parse('$baseUrl/api/goals/sessions?email=$email');
+    final url = Uri.parse('${ApiConstants.sessions}?email=$email');
+
     final response = await http.get(url);
 
     if (response.statusCode == 200) {
       final raw = jsonDecode(response.body);
 
       return List<Map<String, dynamic>>.from(
-          raw.where((item) =>
-          item['sessionDate'] != null && item['dailyGoalDetail'] != null
-          ).map((item) => {
+        raw.where((item) =>
+        item['sessionDate'] != null && item['dailyGoalDetail'] != null).map(
+              (item) => {
             'date': item['sessionDate'] ?? '',
             'title': item['dailyGoalDetail'] ?? '',
             'tip': item['tip'] ?? ''
-          })
+          },
+        ),
       );
     } else {
-      throw Exception('세션 불러오기 실패');
+      throw Exception('세션 불러오기 실패: ${response.statusCode}');
     }
   }
 
@@ -48,7 +49,7 @@ class ApiService {
     required String uid,
     required String provider,
   }) async {
-    final url = Uri.parse('$baseUrl/api/signup');
+    final url = Uri.parse(ApiConstants.signUp);
 
     final response = await http.post(
       url,

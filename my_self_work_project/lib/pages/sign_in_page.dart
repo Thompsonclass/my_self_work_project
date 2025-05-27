@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart'; // AuthProvider import
@@ -23,35 +24,35 @@ class _SignInPageState extends State<SignInPage> {
         child: Center(
           child: SingleChildScrollView(
             child: Form(
-              key: _formKey, // FormKey를 사용하여 폼 상태를 관리합니다.
+              key: _formKey, // 폼 상태를 관리하는 키
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Sign In',
+                    '로그인',
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
                   SizedBox(height: 32),
 
-                  // Email Address Field
+                  // 이메일 입력 필드
                   TextFormField(
                     controller: _emailController,
-                    decoration: InputDecoration(labelText: 'Email'),
+                    decoration: InputDecoration(labelText: '이메일'),
                     keyboardType: TextInputType.emailAddress,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter your email';
+                        return '이메일을 입력해주세요';
                       }
                       return null;
                     },
                   ),
                   SizedBox(height: 16),
 
-                  // Password Field
+                  // 비밀번호 입력 필드
                   TextFormField(
                     controller: _passwordController,
                     decoration: InputDecoration(
-                      labelText: 'Password',
+                      labelText: '비밀번호',
                       suffixIcon: IconButton(
                         icon: Icon(
                           _isPasswordVisible
@@ -68,51 +69,70 @@ class _SignInPageState extends State<SignInPage> {
                     obscureText: !_isPasswordVisible,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter your password';
+                        return '비밀번호를 입력해주세요';
                       }
                       return null;
                     },
                   ),
                   SizedBox(height: 32),
 
-                  // Sign In Button
+                  // 로그인 버튼
                   ElevatedButton(
                     onPressed: () async {
                       if (_formKey.currentState!.validate()) {
-                        final email = _emailController.text;
-                        final password = _passwordController.text;
+                        final email = _emailController.text.trim();
+                        final password = _passwordController.text.trim();
 
                         try {
                           await authProvider.signIn(email, password);
-                          // 로그인 성공 시 홈 화면으로 이동
                           Navigator.pushReplacementNamed(context, '/home');
-                        } catch (e) {
-                          // 로그인 실패 시 에러 메시지 표시
+                        } on FirebaseAuthException catch (e) {
+                          String errorMessage;
+                          switch (e.code) {
+                            case 'invalid-email':
+                              errorMessage = '잘못된 이메일 형식입니다.';
+                              break;
+                            case 'user-not-found':
+                              errorMessage = '존재하지 않는 계정입니다.';
+                              break;
+                            case 'wrong-password':
+                              errorMessage = '비밀번호가 틀렸습니다.';
+                              break;
+                            case 'user-disabled':
+                              errorMessage = '해당 계정은 비활성화되어 있습니다.';
+                              break;
+                            default:
+                              errorMessage = '로그인 중 알 수 없는 오류가 발생했습니다.';
+                          }
+
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error signing in: $e')),
+                            SnackBar(content: Text(errorMessage)),
+                          );
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('예기치 못한 오류가 발생했습니다: $e')),
                           );
                         }
                       } else {
-                        // 폼이 유효하지 않으면 에러 메시지 표시
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Please fill in all fields')),
+                          const SnackBar(content: Text('모든 필드를 올바르게 입력해주세요.')),
                         );
                       }
                     },
-                    child: const Text('Sign In'),
+                    child: const Text('로그인'),
                   ),
                   SizedBox(height: 16),
 
-                  // Sign Up Text Button
+                  // 회원가입 링크
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('Don\'t have an account?'),
+                      Text('아직 계정이 없으신가요?'),
                       TextButton(
                         onPressed: () {
                           Navigator.pushNamed(context, '/sign-up');
                         },
-                        child: Text('Sign Up'),
+                        child: Text('회원가입'),
                       ),
                     ],
                   ),

@@ -1,8 +1,11 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../models/goal_model.dart';
 import '../services/api_service.dart';
+
+import '/screens/user_setting_screen.dart'; // 설정
+import '/screens/user_stat_screen.dart'; // 통계
+import '/screens/user_improvement_test.dart'; // 홈
 
 enum TaskStatus { pending, done, ignored }
 
@@ -41,6 +44,7 @@ class _UserImprovementScreenState extends State<UserImprovementScreen> with Sing
   Timer? _timer;
 
   final TextEditingController _minutesController = TextEditingController(text: '10');
+  int _selectedBottomIndex = 0;
 
   @override
   void initState() {
@@ -328,6 +332,34 @@ class _UserImprovementScreenState extends State<UserImprovementScreen> with Sing
               ],
             ),
           ),
+        ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedBottomIndex,
+        onTap: (index) {
+          if (index == _selectedBottomIndex) return;
+
+          setState(() {
+            _selectedBottomIndex = index;
+          });
+
+          // 경로 기반으로 화면 전환
+          switch (index) {
+            case 0:
+              Navigator.pushReplacementNamed(context, '/improvement');
+              break;
+            case 1:
+              Navigator.pushReplacementNamed(context, '/setting');
+              break;
+            case 2:
+              Navigator.pushReplacementNamed(context, '/stat');
+              break;
+          }
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: '홈'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings), label: '설정'),
+          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: '통계'),
         ],
       ),
     );

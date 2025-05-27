@@ -122,19 +122,19 @@ class _SignUpPageState extends State<SignUpPage> {
                         final password = _passwordController.text;
 
                         try {
-                          // 1. Firebase 회원가입
-                          await FirebaseAuth.instance
-                              .createUserWithEmailAndPassword(
+                          // Firebase 회원가입 시도
+                          await FirebaseAuth.instance.createUserWithEmailAndPassword(
                             email: email,
                             password: password,
                           );
 
                           final user = FirebaseAuth.instance.currentUser!;
                           final uid = user.uid;
-                          final provider =
-                              user.providerData[0].providerId; // ex. "password"
+                          final provider = user.providerData.isNotEmpty
+                              ? user.providerData[0].providerId
+                              : 'password';
 
-                          // 2. Spring 서버에 회원 정보 저장
+                          // Spring 서버에 사용자 정보 저장
                           await ApiService.signUpUser(
                             nickname: nickname,
                             email: email,
@@ -143,12 +143,38 @@ class _SignUpPageState extends State<SignUpPage> {
                           );
 
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('회원가입 완료!')),
+                            const SnackBar(content: Text('회원가입이 완료되었습니다!')),
                           );
+
+                          await Future.delayed(const Duration(seconds: 1));
                           Navigator.pushReplacementNamed(context, '/sign-in');
+
+                        } on FirebaseAuthException catch (e) {
+                          String errorMessage = '회원가입 중 오류가 발생했습니다.';
+
+                          switch (e.code) {
+                            case 'email-already-in-use':
+                              errorMessage = '이미 사용 중인 이메일입니다.';
+                              break;
+                            case 'invalid-email':
+                              errorMessage = '유효하지 않은 이메일 형식입니다.';
+                              break;
+                            case 'operation-not-allowed':
+                              errorMessage = '이메일 가입이 현재 허용되지 않습니다.';
+                              break;
+                            case 'weak-password':
+                              errorMessage = '비밀번호가 너무 약합니다. 더 복잡한 비밀번호를 사용해주세요.';
+                              break;
+                            default:
+                              errorMessage = '알 수 없는 오류가 발생했습니다: ${e.message}';
+                          }
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(errorMessage)),
+                          );
                         } catch (e) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('회원가입 실패: $e')),
+                            SnackBar(content: Text('서버 처리 중 오류가 발생했습니다: $e')),
                           );
                         }
                       }
