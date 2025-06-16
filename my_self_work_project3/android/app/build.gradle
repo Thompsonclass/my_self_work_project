@@ -1,0 +1,60 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+    id "com.google.gms.google-services" //Firebase 관련 서비스 사용을 위한 플러그인
+}
+
+android {
+    namespace "com.myselfwork.my_self_work_project"
+    compileSdk 35 //Android SDK 버전
+    ndkVersion flutter.ndkVersion
+
+    defaultConfig {
+        applicationId "com.myselfwork.my_self_work_project"
+        minSdk 23 //최소지원 Android 버전
+        targetSdk 35
+        versionCode 1
+        versionName "1.0"
+        /*
+        manifestPlaceholders = [
+                onesignal_app_id               : "ce2fcdc2-c8a0-4532-926d-9be5f9a33fa8",
+                onesignal_google_project_number: "REMOTE"
+        ]
+        */
+
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+
+    buildFeatures {
+        buildConfig true // BuildConfig.java 파일 자동 생성 (앱 정보)
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            minifyEnabled true
+            shrinkResources true
+            signingConfig signingConfigs.debug // 실제 배포 시 release 키로 변경
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}
+
+dependencies {
+    implementation platform('com.google.firebase:firebase-bom:33.12.0') //Firebase BOM: 모든 파이어베이스 라이브러리 버전 동기화
+    implementation 'com.google.firebase:firebase-auth' //Firebase 인증 기능 사용
+}
